@@ -258,10 +258,10 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "#bbd3e4",
+    borderColor: colors.borderSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
-    backgroundColor: "#eff8ff",
+    backgroundColor: colors.surfaceSoft,
   },
   signOutText: {
     color: colors.textPrimary,

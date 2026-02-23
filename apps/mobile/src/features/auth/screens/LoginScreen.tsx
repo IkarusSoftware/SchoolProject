@@ -63,8 +63,8 @@ export function LoginScreen() {
   return (
     <LinearGradient
       colors={[colors.gradientTop, colors.gradientMid, colors.gradientBottom]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      start={{ x: 0.15, y: 0 }}
+      end={{ x: 0.85, y: 1 }}
       style={styles.page}
     >
       <StatusBar style="light" />
@@ -80,9 +80,10 @@ export function LoginScreen() {
         >
           <View style={styles.hero}>
             <View style={styles.heroChip}>
-              <Text style={styles.kicker}>EDUSYNC SUITE</Text>
+              <View style={styles.heroChipDot} />
+              <Text style={styles.kicker}>EDUSYNC</Text>
             </View>
-            <Text style={styles.title}>Modern School Experience</Text>
+            <Text style={styles.title}>Hoş Geldiniz</Text>
             <Text style={styles.subtitle}>
               Tek uygulamada veli ve ogretmen akislarini premium mobil deneyimle yonetin.
             </Text>
@@ -95,9 +96,7 @@ export function LoginScreen() {
                 return (
                   <Pressable
                     key={role}
-                    onPress={() => {
-                      setDemoRole(role);
-                    }}
+                    onPress={() => { setDemoRole(role); }}
                     style={({ pressed }) => [
                       styles.roleChip,
                       selected ? styles.roleChipActive : null,
@@ -107,13 +106,10 @@ export function LoginScreen() {
                     <Ionicons
                       name={role === "PARENT" ? "people-outline" : "school-outline"}
                       size={14}
-                      color={selected ? colors.textWhite : colors.textSecondary}
+                      color={selected ? colors.textWhite : colors.textMuted}
                     />
                     <Text
-                      style={[
-                        styles.roleChipText,
-                        selected ? styles.roleChipTextActive : null,
-                      ]}
+                      style={[styles.roleChipText, selected ? styles.roleChipTextActive : null]}
                     >
                       {role === "PARENT" ? "Veli" : "Ogretmen"}
                     </Text>
@@ -125,28 +121,28 @@ export function LoginScreen() {
             <Text style={styles.roleHint}>{roleHint}</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>E-posta</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
-                placeholder="you@example.com"
-                placeholderTextColor="#6d8798"
+                placeholder="ornek@mail.com"
+                placeholderTextColor={colors.textMuted}
                 style={styles.input}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>Şifre</Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 autoCapitalize="none"
-                placeholder="Your password"
-                placeholderTextColor="#6d8798"
+                placeholder="Şifreniz"
+                placeholderTextColor={colors.textMuted}
                 style={styles.input}
               />
             </View>
@@ -163,7 +159,7 @@ export function LoginScreen() {
               onPress={handleLogin}
             >
               <LinearGradient
-                colors={[colors.accentBlueStrong, colors.accentBlue]}
+                colors={["#059669", "#10b981"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.button}
@@ -172,7 +168,7 @@ export function LoginScreen() {
                   <ActivityIndicator size="small" color={colors.textWhite} />
                 ) : (
                   <>
-                    <Text style={styles.buttonText}>Sign in</Text>
+                    <Text style={styles.buttonText}>Giriş Yap</Text>
                     <Ionicons name="arrow-forward" size={16} color={colors.textWhite} />
                   </>
                 )}
@@ -188,170 +184,105 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-  },
-  backgroundLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundOrb: {
-    position: "absolute",
-    borderRadius: radius.pill,
-    backgroundColor: "rgba(151, 215, 255, 0.16)",
-  },
+  page: { flex: 1 },
+  backgroundLayer: { ...StyleSheet.absoluteFillObject },
+  backgroundOrb: { position: "absolute", borderRadius: radius.pill },
   backgroundOrbOne: {
-    width: 280,
-    height: 280,
-    top: -120,
-    right: -80,
+    width: 300, height: 300, top: -140, right: -90,
+    backgroundColor: "rgba(16,185,129,0.05)",
   },
   backgroundOrbTwo: {
-    width: 220,
-    height: 220,
-    bottom: 100,
-    left: -90,
-    backgroundColor: "rgba(255, 194, 126, 0.13)",
+    width: 240, height: 240, bottom: 80, left: -100,
+    backgroundColor: "rgba(99,102,241,0.04)",
   },
-  safeArea: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
   formWrap: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-    gap: spacing.lg,
+    flex: 1, justifyContent: "center",
+    paddingHorizontal: spacing.xl, gap: spacing.lg,
   },
-  hero: {
-    gap: spacing.xs,
-  },
+  hero: { gap: spacing.xs + 2 },
   heroChip: {
-    alignSelf: "flex-start",
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: "rgba(170, 216, 243, 0.52)",
-    backgroundColor: "rgba(8, 32, 49, 0.2)",
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs - 1,
+    alignSelf: "flex-start", flexDirection: "row", alignItems: "center",
+    gap: spacing.xs, borderRadius: radius.pill,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingHorizontal: spacing.sm + 4, paddingVertical: spacing.xs,
+  },
+  heroChipDot: {
+    width: 6, height: 6, borderRadius: 3, backgroundColor: "#10b981",
   },
   kicker: {
-    color: "#a5d8f5",
-    fontSize: typography.bodyXS,
-    letterSpacing: 1.1,
+    color: "rgba(255,255,255,0.40)",
+    fontSize: typography.bodyXS, letterSpacing: 2.2,
     fontFamily: typography.fontDisplayMedium,
   },
   title: {
-    color: colors.textWhite,
-    fontSize: typography.titleXL,
-    lineHeight: 38,
-    fontFamily: typography.fontDisplay,
+    color: colors.textWhite, fontSize: typography.titleXL,
+    lineHeight: 34, fontFamily: typography.fontDisplay, letterSpacing: -0.5,
   },
   subtitle: {
-    color: colors.textLight,
-    fontSize: typography.bodyMD,
-    lineHeight: 20,
-    fontFamily: typography.fontBody,
+    color: "rgba(255,255,255,0.38)", fontSize: typography.bodySM,
+    lineHeight: 19, fontFamily: typography.fontBody,
   },
   card: {
-    borderRadius: radius.xl,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    padding: spacing.lg,
-    gap: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 22,
-    elevation: 10,
+    borderRadius: radius.xl, backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.borderSoft,
+    padding: spacing.lg, gap: spacing.md,
+    shadowColor: "#000", shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 12 }, shadowRadius: 28, elevation: 8,
   },
-  roleSegment: {
-    flexDirection: "row",
-    gap: spacing.xs,
-  },
+  roleSegment: { flexDirection: "row", gap: spacing.xs },
   roleChip: {
-    flex: 1,
-    minHeight: 38,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
+    flex: 1, minHeight: 40, borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.borderSoft,
     backgroundColor: colors.surfaceSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: spacing.xs,
+    alignItems: "center", justifyContent: "center",
+    flexDirection: "row", gap: spacing.xs,
   },
   roleChipActive: {
-    borderColor: colors.accentBlue,
-    backgroundColor: colors.accentBlue,
+    borderColor: "#10b981", backgroundColor: "#10b981",
   },
-  roleChipPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.98 }],
-  },
+  roleChipPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
   roleChipText: {
-    color: colors.textSecondary,
-    fontSize: typography.bodySM,
+    color: colors.textSecondary, fontSize: typography.bodySM,
     fontFamily: typography.fontBodyStrong,
   },
-  roleChipTextActive: {
-    color: colors.textWhite,
-  },
+  roleChipTextActive: { color: colors.textWhite },
   roleHint: {
-    color: colors.textMuted,
-    fontSize: typography.bodySM,
+    color: colors.textMuted, fontSize: typography.bodySM,
     fontFamily: typography.fontBodyRegular,
   },
-  inputGroup: {
-    gap: spacing.xs,
-  },
+  inputGroup: { gap: spacing.xs },
   label: {
-    color: colors.textPrimary,
-    fontSize: typography.bodySM,
+    color: colors.textPrimary, fontSize: typography.bodySM,
     fontFamily: typography.fontBodyStrong,
   },
   input: {
-    minHeight: 45,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
+    minHeight: 46, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.borderSoft,
     backgroundColor: colors.surfaceSoft,
     paddingHorizontal: spacing.md,
-    color: colors.textPrimary,
-    fontSize: typography.bodyMD,
+    color: colors.textPrimary, fontSize: typography.bodyMD,
     fontFamily: typography.fontBody,
   },
   errorText: {
-    color: colors.accentCoral,
-    fontSize: typography.bodySM,
+    color: colors.accentCoral, fontSize: typography.bodySM,
     fontFamily: typography.fontBodyRegular,
   },
-  buttonWrap: {
-    borderRadius: radius.md,
-    overflow: "hidden",
-  },
+  buttonWrap: { borderRadius: radius.md, overflow: "hidden" },
   button: {
-    minHeight: 46,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: spacing.xs + 1,
+    minHeight: 48, borderRadius: radius.md,
+    alignItems: "center", justifyContent: "center",
+    flexDirection: "row", gap: spacing.xs + 1,
   },
-  buttonPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.99 }],
-  },
-  buttonDisabled: {
-    opacity: 0.75,
-  },
+  buttonPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
+  buttonDisabled: { opacity: 0.7 },
   buttonText: {
-    color: colors.textWhite,
-    fontSize: typography.bodyMD,
+    color: colors.textWhite, fontSize: typography.bodyMD,
     fontFamily: typography.fontDisplayMedium,
   },
   endpointText: {
-    color: colors.textMuted,
-    fontSize: typography.bodyXS,
-    fontFamily: typography.fontBodyRegular,
+    color: colors.textMuted, fontSize: typography.bodyXS,
+    fontFamily: typography.fontBodyRegular, textAlign: "center",
   },
 });

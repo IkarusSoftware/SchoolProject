@@ -80,7 +80,7 @@ export function AppNavigator() {
 const styles = StyleSheet.create({
   bootContainer: {
     flex: 1,
-    backgroundColor: "#0a3248",
+    backgroundColor: "#0c0c10",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0a3248",
+    backgroundColor: "#0c0c10",
     paddingHorizontal: 24,
     gap: 12,
   },

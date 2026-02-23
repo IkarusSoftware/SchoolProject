@@ -178,7 +178,7 @@ export function MessagesScreen() {
               value={draftMessage}
               onChangeText={setDraftMessage}
               placeholder="Write a message..."
-              placeholderTextColor="#67859a"
+              placeholderTextColor={colors.textMuted}
               multiline
               style={styles.composerInput}
             />
@@ -214,8 +214,8 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#bcd3e4",
-    backgroundColor: "#eff8ff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accentBlue,
     padding: 3,
-    backgroundColor: "#eef8ff",
+    backgroundColor: "rgba(16,185,129,0.04)",
   },
   conversationCardPressed: {
     opacity: 0.92,
@@ -248,16 +248,16 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   messageBubbleParent: {
-    backgroundColor: "#e8f4ff",
+    backgroundColor: "rgba(16,185,129,0.06)",
     borderWidth: 1,
-    borderColor: "#c8dff2",
+    borderColor: "rgba(16,185,129,0.12)",
     alignSelf: "flex-end",
     maxWidth: "85%",
   },
   messageBubbleSchool: {
-    backgroundColor: "#f6fbff",
+    backgroundColor: colors.surfaceSoft,
     borderWidth: 1,
-    borderColor: "#d6e6f2",
+    borderColor: colors.borderSoft,
     alignSelf: "flex-start",
     maxWidth: "85%",
   },
@@ -287,10 +287,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontBodyRegular,
   },
   messageTimeParent: {
-    color: "#3b6d8f",
+    color: colors.accentBlueStrong,
   },
   messageTimeSchool: {
-    color: "#69859a",
+    color: colors.textMuted,
   },
   composerWrap: {
     marginTop: spacing.sm,
@@ -300,8 +300,8 @@ const styles = StyleSheet.create({
     minHeight: 82,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#c3d7e7",
-    backgroundColor: "#f8fcff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: colors.textPrimary,

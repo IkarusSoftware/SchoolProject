@@ -9,32 +9,26 @@ interface InfoRowProps {
   badgeTone?: BadgeTone;
 }
 
-const badgeStyles: Record<BadgeTone, { bg: string; text: string }> = {
-  info: { bg: colors.badgeInfoBg, text: colors.badgeInfoText },
-  warn: { bg: colors.badgeWarnBg, text: colors.badgeWarnText },
-  hot: { bg: colors.badgeHotBg, text: colors.badgeHotText },
-  ok: { bg: colors.badgeOkBg, text: colors.badgeOkText },
+const tones: Record<BadgeTone, { bg: string; fg: string }> = {
+  info: { bg: colors.badgeInfoBg, fg: colors.badgeInfoText },
+  warn: { bg: colors.badgeWarnBg, fg: colors.badgeWarnText },
+  hot:  { bg: colors.badgeHotBg,  fg: colors.badgeHotText },
+  ok:   { bg: colors.badgeOkBg,   fg: colors.badgeOkText },
 };
 
-export function InfoRow({
-  title,
-  detail,
-  badgeText,
-  badgeTone = "info",
-}: InfoRowProps) {
-  const tone = badgeStyles[badgeTone];
-
+export function InfoRow({ title, detail, badgeText, badgeTone = "info" }: InfoRowProps) {
+  const t = tones[badgeTone];
   return (
     <View style={styles.row}>
-      <View style={[styles.indicator, { backgroundColor: tone.text }]} />
-      <View style={styles.textWrap}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.detail}>{detail}</Text>
+      <View style={[styles.bar, { backgroundColor: t.fg }]} />
+      <View style={styles.content}>
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        <Text style={styles.detail} numberOfLines={2}>{detail}</Text>
       </View>
       {badgeText ? (
-        <Text style={[styles.badge, { color: tone.text, backgroundColor: tone.bg }]}>
-          {badgeText}
-        </Text>
+        <View style={[styles.badge, { backgroundColor: t.bg }]}>
+          <Text style={[styles.badgeText, { color: t.fg }]}>{badgeText}</Text>
+        </View>
       ) : null}
     </View>
   );
@@ -42,46 +36,30 @@ export function InfoRow({
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: "#d2e1ec",
-    backgroundColor: "#f8fcff",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    flexDirection: "row", alignItems: "center",
+    gap: spacing.sm + 2, borderRadius: radius.md,
+    backgroundColor: colors.surfaceSoft,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 3,
   },
-  indicator: {
-    width: 4,
-    alignSelf: "stretch",
-    borderRadius: radius.pill,
-    opacity: 0.9,
+  bar: {
+    width: 3, alignSelf: "stretch",
+    borderRadius: radius.pill, opacity: 0.45,
   },
-  textWrap: {
-    flex: 1,
-  },
+  content: { flex: 1 },
   title: {
-    color: colors.textPrimary,
-    fontSize: typography.bodyMD,
-    fontFamily: typography.fontBodyStrong,
+    color: colors.textPrimary, fontSize: typography.bodyMD,
+    fontFamily: typography.fontBodyStrong, letterSpacing: -0.1,
   },
   detail: {
-    color: colors.textMuted,
-    fontSize: typography.bodySM,
-    fontFamily: typography.fontBodyRegular,
-    marginTop: 4,
-    lineHeight: 17,
+    color: colors.textMuted, fontSize: typography.bodySM,
+    fontFamily: typography.fontBodyRegular, marginTop: 3, lineHeight: 17,
   },
   badge: {
     borderRadius: radius.pill,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 1,
-    fontSize: typography.bodyXS,
-    fontFamily: typography.fontBodyStrong,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+  },
+  badgeText: {
+    fontSize: typography.bodyXS, fontFamily: typography.fontBodyStrong,
+    letterSpacing: 0.2,
   },
 });

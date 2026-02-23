@@ -68,8 +68,8 @@ function createStyles() {
     chipButton: {
       borderRadius: radius.pill,
       borderWidth: 1,
-      borderColor: "#bbd2e4",
-      backgroundColor: "#eff8ff",
+      borderColor: colors.borderSoft,
+      backgroundColor: colors.surfaceSoft,
       paddingHorizontal: spacing.sm + 2,
       paddingVertical: spacing.xs + 1,
     },
@@ -94,7 +94,7 @@ function createStyles() {
       borderRadius: radius.md,
       borderWidth: 1,
       borderColor: colors.borderSoft,
-      backgroundColor: "#f8fcff",
+      backgroundColor: colors.surfaceSoft,
       padding: spacing.sm + 2,
       gap: spacing.xs,
     },
@@ -120,8 +120,8 @@ function createStyles() {
       minHeight: 34,
       borderRadius: radius.sm,
       borderWidth: 1,
-      borderColor: "#bbd2e4",
-      backgroundColor: "#eff8ff",
+      borderColor: colors.borderSoft,
+      backgroundColor: colors.surfaceSoft,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: spacing.xs,
@@ -328,7 +328,7 @@ export function TeacherAttendanceScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search student..."
-            placeholderTextColor="#6d8798"
+            placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
           />
 

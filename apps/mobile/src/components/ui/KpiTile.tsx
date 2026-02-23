@@ -1,4 +1,3 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing, typography } from "../../theme";
 
@@ -8,65 +7,47 @@ interface KpiTileProps {
   tone: "blue" | "green" | "orange";
 }
 
-const toneMap: Record<KpiTileProps["tone"], [string, string]> = {
-  blue: ["#dff2ff", "#f6fbff"],
-  green: ["#def7ec", "#f8fcfa"],
-  orange: ["#ffedd7", "#fffaf4"],
-} as const;
+const cfg: Record<KpiTileProps["tone"], { bg: string; dot: string; lbl: string }> = {
+  blue:   { bg: "rgba(99,102,241,0.04)",  dot: "#6366f1", lbl: "#4f46e5" },
+  green:  { bg: "rgba(16,185,129,0.04)",   dot: "#10b981", lbl: "#059669" },
+  orange: { bg: "rgba(245,158,11,0.04)",   dot: "#f59e0b", lbl: "#d97706" },
+};
 
 export function KpiTile({ value, label, tone }: KpiTileProps) {
+  const c = cfg[tone];
   return (
-    <LinearGradient
-      colors={toneMap[tone]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.tile}
-    >
-      <View style={styles.topRow}>
-        <Text style={styles.label}>{label}</Text>
-        <View style={styles.dot} />
+    <View style={[styles.tile, { backgroundColor: c.bg }]}>
+      <View style={styles.top}>
+        <Text style={[styles.label, { color: c.lbl }]}>{label}</Text>
+        <View style={[styles.dot, { backgroundColor: c.dot }]} />
       </View>
       <Text style={styles.value}>{value}</Text>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   tile: {
-    flex: 1,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: "#d2e2ee",
-    paddingHorizontal: spacing.sm + 4,
-    paddingVertical: spacing.sm + 4,
-    minHeight: 86,
-    justifyContent: "space-between",
+    flex: 1, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.borderSoft,
+    paddingHorizontal: spacing.sm + 4, paddingVertical: spacing.sm + 4,
+    minHeight: 82, justifyContent: "space-between",
   },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.xs,
+  top: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", gap: spacing.xs,
   },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentBlue,
-    opacity: 0.6,
-  },
+  dot: { width: 6, height: 6, borderRadius: 3, opacity: 0.55 },
   value: {
     color: colors.textPrimary,
     fontSize: typography.titleXL,
-    fontFamily: typography.fontDisplayMedium,
-    lineHeight: 34,
+    fontFamily: typography.fontDisplay,
+    lineHeight: 32, letterSpacing: -0.5,
   },
   label: {
-    color: colors.textSecondary,
-    fontSize: typography.bodySM,
+    fontSize: typography.bodyXS,
     fontFamily: typography.fontBodyStrong,
-    lineHeight: 16,
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
 });

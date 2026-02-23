@@ -106,7 +106,7 @@ export function AnnouncementsScreen() {
           value={query}
           onChangeText={setQuery}
           placeholder="Search announcement..."
-          placeholderTextColor="#6b8598"
+          placeholderTextColor={colors.textMuted}
           style={styles.searchInput}
         />
         <Pressable
@@ -186,8 +186,8 @@ const styles = StyleSheet.create({
   filterChip: {
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "#bfd4e4",
-    backgroundColor: "#f0f8ff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs + 1,
   },
@@ -211,8 +211,8 @@ const styles = StyleSheet.create({
     minHeight: 42,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#c4d8e8",
-    backgroundColor: "#f8fcff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
     paddingHorizontal: spacing.md,
     color: colors.textPrimary,
     fontSize: typography.bodyMD,
@@ -222,8 +222,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "#bbd2e4",
-    backgroundColor: "#eff8ff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
   },
@@ -239,8 +239,8 @@ const styles = StyleSheet.create({
   announcementCard: {
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#d4e2ee",
-    backgroundColor: "#fcfeff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceElevated,
     padding: spacing.xs,
     gap: spacing.xs,
   },
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   },
   pinButton: {
     borderRadius: radius.pill,
-    backgroundColor: "#e7f4ff",
+    backgroundColor: "rgba(16,185,129,0.06)",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },

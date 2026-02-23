@@ -23,21 +23,24 @@ export function GradientLayout({
   return (
     <LinearGradient
       colors={[colors.gradientTop, colors.gradientMid, colors.gradientBottom]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      start={{ x: 0.15, y: 0 }}
+      end={{ x: 0.85, y: 1 }}
       style={styles.page}
     >
       <StatusBar style="light" />
-      <View pointerEvents="none" style={styles.backgroundLayer}>
-        <View style={[styles.glowOrb, styles.glowOrbTop]} />
-        <View style={[styles.glowOrb, styles.glowOrbBottom]} />
-        <View style={[styles.glowOrb, styles.glowOrbAccent]} />
+
+      {/* Ambient glow orbs */}
+      <View pointerEvents="none" style={styles.bgLayer}>
+        <View style={[styles.orb, styles.orbTopRight]} />
+        <View style={[styles.orb, styles.orbBottomLeft]} />
+        <View style={[styles.orb, styles.orbMidRight]} />
       </View>
 
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top"]}>
         <View style={styles.hero}>
-          <View style={styles.kickerChip}>
-            <Text style={styles.kicker}>EDUSYNC MOBILE</Text>
+          <View style={styles.chip}>
+            <View style={styles.chipDot} />
+            <Text style={styles.chipText}>EDUSYNC</Text>
           </View>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
@@ -45,7 +48,7 @@ export function GradientLayout({
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.scrollInner}
           showsVerticalScrollIndicator={false}
           refreshControl={
             onRefresh ? (
@@ -66,79 +69,67 @@ export function GradientLayout({
 }
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
+  page: { flex: 1 },
+  bgLayer: { ...StyleSheet.absoluteFillObject },
+  orb: { position: "absolute", borderRadius: 999 },
+  orbTopRight: {
+    width: 340, height: 340, top: -160, right: -120,
+    backgroundColor: "rgba(16,185,129,0.05)",
   },
-  backgroundLayer: {
-    ...StyleSheet.absoluteFillObject,
+  orbBottomLeft: {
+    width: 280, height: 280, bottom: 60, left: -110,
+    backgroundColor: "rgba(99,102,241,0.04)",
   },
-  glowOrb: {
-    position: "absolute",
-    borderRadius: 999,
-    backgroundColor: "rgba(162, 219, 255, 0.18)",
+  orbMidRight: {
+    width: 180, height: 180, top: "38%", right: -60,
+    backgroundColor: "rgba(245,158,11,0.025)",
   },
-  glowOrbTop: {
-    width: 320,
-    height: 320,
-    top: -130,
-    right: -110,
-  },
-  glowOrbBottom: {
-    width: 250,
-    height: 250,
-    bottom: 130,
-    left: -100,
-    backgroundColor: "rgba(135, 222, 186, 0.13)",
-  },
-  glowOrbAccent: {
-    width: 180,
-    height: 180,
-    bottom: 240,
-    right: -70,
-    backgroundColor: "rgba(255, 199, 130, 0.14)",
-  },
-  safeArea: {
-    flex: 1,
-  },
+  safe: { flex: 1 },
   hero: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg + 2,
     marginBottom: spacing.lg,
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
   },
-  kickerChip: {
+  chip: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "rgba(169, 216, 246, 0.55)",
-    backgroundColor: "rgba(6, 28, 45, 0.24)",
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs - 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs,
   },
-  kicker: {
-    color: "#a8d8f8",
+  chipDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: "#10b981",
+  },
+  chipText: {
+    color: "rgba(255,255,255,0.40)",
     fontSize: typography.bodyXS,
-    letterSpacing: 1.2,
-    fontFamily: typography.fontDisplay,
+    letterSpacing: 2.2,
+    fontFamily: typography.fontDisplayMedium,
   },
   title: {
     color: colors.textWhite,
     fontSize: typography.titleXL,
-    lineHeight: 38,
+    lineHeight: 34,
     fontFamily: typography.fontDisplay,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: colors.textLight,
-    fontSize: typography.bodyMD,
+    color: "rgba(255,255,255,0.38)",
+    fontSize: typography.bodySM,
     fontFamily: typography.fontBody,
-    lineHeight: 20,
+    lineHeight: 18,
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
+  scroll: { flex: 1 },
+  scrollInner: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: 136,
-    gap: spacing.lg,
+    paddingBottom: 140,
+    gap: spacing.md,
   },
 });

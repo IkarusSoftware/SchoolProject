@@ -308,7 +308,7 @@ export function TeacherMessagesScreen() {
               value={messageText}
               onChangeText={setMessageText}
               placeholder="Write a message..."
-              placeholderTextColor="#6d8798"
+              placeholderTextColor={colors.textMuted}
               multiline
               style={styles.composerInput}
             />
@@ -338,16 +338,16 @@ const styles = StyleSheet.create({
   },
   conversationSelected: {
     borderWidth: 1,
-    borderColor: "#84c0e6",
-    backgroundColor: "#eef8ff",
+    borderColor: "rgba(16,185,129,0.3)",
+    backgroundColor: "rgba(16,185,129,0.04)",
     padding: 3,
   },
   loadOlderButton: {
     alignSelf: "center",
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "#bbd2e4",
-    backgroundColor: "#eff8ff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
   },
@@ -370,8 +370,8 @@ const styles = StyleSheet.create({
     minHeight: 84,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#c2d7e6",
-    backgroundColor: "#f8fcff",
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: colors.textPrimary,

@@ -12,41 +12,23 @@ interface RequestStateProps {
   onRetry?: () => void;
 }
 
-export function RequestState({
-  title,
-  subtitle,
-  mode,
-  message,
-  onRetry,
-}: RequestStateProps) {
+export function RequestState({ title, subtitle, mode, message, onRetry }: RequestStateProps) {
   const isLoading = mode === "loading";
   const hasRetry = !isLoading && typeof onRetry === "function";
 
   return (
     <SectionCard title={title} subtitle={subtitle}>
-      <View style={styles.container}>
-        {isLoading ? (
-          <ActivityIndicator size="small" color={colors.accentBlue} />
-        ) : null}
-
-        <Text style={styles.message}>
-          {message ||
-            (isLoading
-              ? "Data is loading..."
-              : mode === "empty"
-                ? "No records found."
-                : "Request failed.")}
+      <View style={styles.wrap}>
+        {isLoading ? <ActivityIndicator size="small" color="#10b981" /> : null}
+        <Text style={styles.msg}>
+          {message || (isLoading ? "Yükleniyor..." : mode === "empty" ? "Kayıt bulunamadı." : "İstek başarısız.")}
         </Text>
-
         {hasRetry ? (
           <Pressable
-            style={({ pressed }) => [
-              styles.retryButton,
-              pressed ? styles.retryButtonPressed : null,
-            ]}
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
             onPress={onRetry}
           >
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.btnText}>Tekrar Dene</Text>
           </Pressable>
         ) : null}
       </View>
@@ -55,37 +37,24 @@ export function RequestState({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrap: {
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: "#d3e2ee",
-    backgroundColor: "#f6fbff",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    gap: spacing.sm,
+    backgroundColor: colors.surfaceSoft,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    alignItems: "center", gap: spacing.sm,
   },
-  message: {
-    color: colors.textMuted,
-    fontSize: typography.bodySM,
-    fontFamily: typography.fontBodyRegular,
-    textAlign: "center",
-    lineHeight: 18,
+  msg: {
+    color: colors.textMuted, fontSize: typography.bodySM,
+    fontFamily: typography.fontBodyRegular, textAlign: "center", lineHeight: 18,
   },
-  retryButton: {
-    marginTop: spacing.xs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentBlueStrong,
-    paddingHorizontal: spacing.md + 4,
-    paddingVertical: spacing.xs + 2,
+  btn: {
+    marginTop: spacing.xs, borderRadius: radius.pill,
+    backgroundColor: "#059669",
+    paddingHorizontal: spacing.md + 4, paddingVertical: spacing.xs + 3,
   },
-  retryButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  retryText: {
-    color: colors.textWhite,
-    fontSize: typography.bodySM,
+  btnPressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
+  btnText: {
+    color: colors.textWhite, fontSize: typography.bodySM,
     fontFamily: typography.fontBodyStrong,
   },
 });

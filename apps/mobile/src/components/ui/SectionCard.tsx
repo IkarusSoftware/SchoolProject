@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { LinearGradient } from "expo-linear-gradient";
 import type { ReactNode } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing, typography } from "../../theme";
@@ -13,58 +12,40 @@ interface SectionCardProps {
 }
 
 export function SectionCard({
-  title,
-  subtitle,
-  rightLabel,
-  children,
-  animateDelayMs = 0,
+  title, subtitle, rightLabel, children, animateDelayMs = 0,
 }: SectionCardProps) {
   const enter = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const animation = Animated.timing(enter, {
-      toValue: 1,
-      duration: 360,
-      delay: animateDelayMs,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+    const anim = Animated.timing(enter, {
+      toValue: 1, duration: 400, delay: animateDelayMs,
+      easing: Easing.out(Easing.cubic), useNativeDriver: true,
     });
-
-    animation.start();
-
-    return () => {
-      animation.stop();
-    };
+    anim.start();
+    return () => { anim.stop(); };
   }, [animateDelayMs, enter]);
 
-  const animatedStyle = {
-    opacity: enter,
-    transform: [
-      {
-        translateY: enter.interpolate({
-          inputRange: [0, 1],
-          outputRange: [10, 0],
-        }),
-      },
-    ],
-  };
-
   return (
-    <Animated.View style={[styles.card, animatedStyle]}>
-      <LinearGradient
-        colors={["rgba(66, 149, 199, 0.28)", "rgba(16, 120, 178, 0.04)"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.topAccent}
-      />
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+    <Animated.View style={[styles.card, {
+      opacity: enter,
+      transform: [{ translateY: enter.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }],
+    }]}>
+      <View style={styles.accent} />
+      <View style={styles.inner}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>{title}</Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </View>
+          {rightLabel ? (
+            <View style={styles.labelPill}>
+              <View style={styles.labelDot} />
+              <Text style={styles.labelText}>{rightLabel}</Text>
+            </View>
+          ) : null}
         </View>
-        {rightLabel ? <Text style={styles.rightLabel}>{rightLabel}</Text> : null}
+        <View style={styles.body}>{children}</View>
       </View>
-      <View style={styles.body}>{children}</View>
     </Animated.View>
   );
 }
@@ -75,49 +56,58 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
-    padding: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.13,
-    shadowOffset: { width: 0, height: 12 },
+    flexDirection: "row",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 6 },
     shadowRadius: 20,
-    elevation: 6,
+    elevation: 3,
   },
-  topAccent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+  accent: {
+    width: 3,
+    backgroundColor: "#10b981",
+    opacity: 0.6,
   },
+  inner: { flex: 1, padding: spacing.md + 2 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing.sm,
   },
+  headerLeft: { flex: 1 },
   title: {
     color: colors.textPrimary,
     fontSize: typography.titleMD,
     fontFamily: typography.fontDisplayMedium,
+    letterSpacing: -0.3,
   },
   subtitle: {
     marginTop: 2,
     color: colors.textMuted,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontBody,
+    fontFamily: typography.fontBodyRegular,
   },
-  rightLabel: {
-    color: colors.accentGreen,
+  labelPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(16,185,129,0.06)",
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs - 1,
+  },
+  labelDot: {
+    width: 5, height: 5, borderRadius: 2.5,
+    backgroundColor: "#10b981",
+  },
+  labelText: {
+    color: "#059669",
     fontSize: typography.bodyXS,
     fontFamily: typography.fontBodyStrong,
-    marginTop: 3,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
-  body: {
-    marginTop: spacing.sm + 2,
-    gap: spacing.sm,
-  },
+  body: { marginTop: spacing.md, gap: spacing.sm + 2 },
 });
