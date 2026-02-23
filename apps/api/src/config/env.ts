@@ -8,7 +8,7 @@ const envSchema = z.object({
   // Database
   DATABASE_URL: z
     .string()
-    .default("postgresql://edusync:edusync_dev_2026@localhost:5432/edusync_dev"),
+    .default("postgresql://furkan:1234@localhost:5432/edusync_dev"),
 
   // Redis
   REDIS_URL: z.string().default("redis://localhost:6379"),

@@ -5,7 +5,9 @@ export default defineConfig({
   out: "./src/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "postgresql://furkan:1234@localhost:5432/edusync_dev",
+    url:
+      process.env.DATABASE_URL ||
+      "postgresql://furkan:1234@localhost:5432/edusync_dev",
   },
   verbose: true,
   strict: true,

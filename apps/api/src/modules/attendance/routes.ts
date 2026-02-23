@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and, count, asc, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, count, asc, desc, gte, lte, sql, inArray } from "drizzle-orm";
 import { db, schema } from "@edusync/db";
 import { createAttendanceSchema, bulkAttendanceSchema, attendanceQuerySchema, leaveRequestSchema, reviewLeaveRequestSchema } from "@edusync/validators";
 import { uuidParamSchema } from "@edusync/validators";
@@ -16,9 +16,13 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
   app.get("/", { preHandler: [validate({ query: attendanceQuerySchema })] }, async (request, reply) => {
     const query = (request as any).validatedQuery;
     const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
     const conditions: any[] = [];
 
-    if (tenantId) conditions.push(eq(schema.attendance.tenantId, tenantId));
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.attendance.tenantId, tenantId));
+    }
     if (query.classId) conditions.push(eq(schema.attendance.classId, query.classId));
     if (query.studentId) conditions.push(eq(schema.attendance.studentId, query.studentId));
     if (query.date) conditions.push(eq(schema.attendance.date, query.date));
@@ -55,6 +59,26 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
     const tenantId = request.user!.tenantId;
     if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
 
+    const student = await db.query.students.findFirst({
+      where: and(
+        eq(schema.students.id, data.studentId),
+        eq(schema.students.tenantId, tenantId)
+      ),
+      columns: { id: true },
+    });
+    if (!student) throw new NotFoundError("Öğrenci");
+
+    if (data.classId) {
+      const classRecord = await db.query.classes.findFirst({
+        where: and(
+          eq(schema.classes.id, data.classId),
+          eq(schema.classes.tenantId, tenantId)
+        ),
+        columns: { id: true },
+      });
+      if (!classRecord) throw new NotFoundError("Sınıf");
+    }
+
     const [record] = await db.insert(schema.attendance).values({
       ...data,
       tenantId,
@@ -77,6 +101,32 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
     const { classId, date, records } = (request as any).validatedBody;
     const tenantId = request.user!.tenantId;
     if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+
+    const classRecord = await db.query.classes.findFirst({
+      where: and(
+        eq(schema.classes.id, classId),
+        eq(schema.classes.tenantId, tenantId)
+      ),
+      columns: { id: true },
+    });
+    if (!classRecord) throw new NotFoundError("Sınıf");
+
+    const studentIds: string[] = Array.from(
+      new Set(records.map((r: any) => String(r.studentId)))
+    );
+    const students = await db
+      .select({ id: schema.students.id })
+      .from(schema.students)
+      .where(
+        and(
+          eq(schema.students.tenantId, tenantId),
+          inArray(schema.students.id, studentIds)
+        )
+      );
+
+    if (students.length !== studentIds.length) {
+      throw new ForbiddenError("Bazı öğrenciler bu okula ait değil");
+    }
 
     const values = records.map((r: any) => ({
       tenantId,
@@ -108,13 +158,17 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
   app.get("/summary", async (request, reply) => {
     const query = request.query as { classId?: string; date?: string };
     const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
     if (!query.classId || !query.date) throw new BadRequestError("classId ve date gerekli");
 
     const conditions = [
       eq(schema.attendance.classId, query.classId),
       eq(schema.attendance.date, query.date),
     ];
-    if (tenantId) conditions.push(eq(schema.attendance.tenantId, tenantId));
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.attendance.tenantId, tenantId));
+    }
 
     const records = await db.query.attendance.findMany({
       where: and(...conditions),
@@ -145,6 +199,28 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
     const tenantId = request.user!.tenantId;
     if (!tenantId) throw new ForbiddenError();
 
+    const student = await db.query.students.findFirst({
+      where: and(
+        eq(schema.students.id, data.studentId),
+        eq(schema.students.tenantId, tenantId)
+      ),
+      columns: { id: true },
+    });
+    if (!student) throw new NotFoundError("Öğrenci");
+
+    if (request.user!.role === "PARENT") {
+      const link = await db.query.studentParents.findFirst({
+        where: and(
+          eq(schema.studentParents.studentId, data.studentId),
+          eq(schema.studentParents.parentId, request.user!.userId)
+        ),
+        columns: { id: true },
+      });
+      if (!link) {
+        throw new ForbiddenError("Bu öğrenci için izin talebi oluşturamazsınız");
+      }
+    }
+
     const [leaveRequest] = await db.insert(schema.leaveRequests).values({
       ...data,
       tenantId,
@@ -157,10 +233,14 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
   // ─── GET /attendance/leave-requests ───
   app.get("/leave-requests", async (request, reply) => {
     const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
     const query = request.query as { status?: string; studentId?: string };
     const conditions: any[] = [];
 
-    if (tenantId) conditions.push(eq(schema.leaveRequests.tenantId, tenantId));
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.leaveRequests.tenantId, tenantId));
+    }
     if (query.status) conditions.push(eq(schema.leaveRequests.status, query.status));
     if (query.studentId) conditions.push(eq(schema.leaveRequests.studentId, query.studentId));
 
@@ -186,13 +266,21 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
     const { status, reviewNote } = (request as any).validatedBody;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.leaveRequests.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.leaveRequests.tenantId, tenantId));
+    }
 
     const [updated] = await db.update(schema.leaveRequests).set({
       status,
       reviewNote,
       reviewedBy: request.user!.userId,
       reviewedAt: new Date(),
-    }).where(eq(schema.leaveRequests.id, id)).returning();
+    }).where(and(...conditions)).returning();
 
     if (!updated) throw new NotFoundError("İzin talebi");
     sendSuccess(reply, updated);

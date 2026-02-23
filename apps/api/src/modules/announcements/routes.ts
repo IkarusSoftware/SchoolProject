@@ -16,9 +16,13 @@ export async function announcementRoutes(app: FastifyInstance): Promise<void> {
   app.get("/", { preHandler: [validate({ query: announcementQuerySchema })] }, async (request, reply) => {
     const query = (request as any).validatedQuery;
     const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
     const conditions: any[] = [];
 
-    if (tenantId) conditions.push(eq(schema.announcements.tenantId, tenantId));
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.announcements.tenantId, tenantId));
+    }
     if (query.targetType) conditions.push(eq(schema.announcements.targetType, query.targetType));
     if (query.priority) conditions.push(eq(schema.announcements.priority, query.priority));
     if (query.isPublished !== undefined) conditions.push(eq(schema.announcements.isPublished, query.isPublished));
@@ -57,8 +61,21 @@ export async function announcementRoutes(app: FastifyInstance): Promise<void> {
   // ─── GET /announcements/:id ───
   app.get("/:id", { preHandler: [validate({ params: uuidParamSchema })] }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.announcements.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.announcements.tenantId, tenantId));
+    }
+
+    if (request.user!.role === "PARENT") {
+      conditions.push(eq(schema.announcements.isPublished, true));
+    }
+
     const announcement = await db.query.announcements.findFirst({
-      where: eq(schema.announcements.id, id),
+      where: and(...conditions),
       with: { author: { columns: { id: true, firstName: true, lastName: true, avatar: true } } },
     });
     if (!announcement) throw new NotFoundError("Duyuru");
@@ -112,13 +129,21 @@ export async function announcementRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
     const data = (request as any).validatedBody;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.announcements.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.announcements.tenantId, tenantId));
+    }
 
     const updateData: Record<string, any> = { ...data, updatedAt: new Date() };
     if (data.isPublished && !data.publishedAt) updateData.publishedAt = new Date();
     if (data.expiresAt) updateData.expiresAt = new Date(data.expiresAt);
 
     const [updated] = await db.update(schema.announcements).set(updateData)
-      .where(eq(schema.announcements.id, id)).returning();
+      .where(and(...conditions)).returning();
     if (!updated) throw new NotFoundError("Duyuru");
 
     sendSuccess(reply, updated);
@@ -132,7 +157,22 @@ export async function announcementRoutes(app: FastifyInstance): Promise<void> {
     ],
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
-    await db.delete(schema.announcements).where(eq(schema.announcements.id, id));
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.announcements.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.announcements.tenantId, tenantId));
+    }
+
+    const deleted = await db
+      .delete(schema.announcements)
+      .where(and(...conditions))
+      .returning({ id: schema.announcements.id });
+
+    if (!deleted.length) throw new NotFoundError("Duyuru");
+
     sendSuccess(reply, { message: "Duyuru silindi" });
   });
 }

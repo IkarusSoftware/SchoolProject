@@ -62,20 +62,26 @@ async function buildApp() {
       });
     }
 
+    const fastifyError = error as {
+      validation?: unknown;
+      statusCode?: number;
+      message?: string;
+    };
+
     // Fastify validation errors
-    if (error.validation) {
+    if (fastifyError.validation) {
       return reply.status(400).send({
         success: false,
         error: {
           code: "VALIDATION_ERROR",
           message: "Doğrulama hatası",
-          details: error.validation,
+          details: fastifyError.validation,
         },
       });
     }
 
     // Rate limit errors
-    if (error.statusCode === 429) {
+    if (fastifyError.statusCode === 429) {
       return reply.status(429).send({
         success: false,
         error: {
@@ -86,7 +92,7 @@ async function buildApp() {
     }
 
     // Unknown errors
-    const statusCode = error.statusCode || 500;
+    const statusCode = fastifyError.statusCode || 500;
     return reply.status(statusCode).send({
       success: false,
       error: {
@@ -94,7 +100,9 @@ async function buildApp() {
         message:
           env.NODE_ENV === "production"
             ? "Bir hata oluştu"
-            : error.message,
+            : error instanceof Error
+              ? error.message
+              : "Bilinmeyen hata",
       },
     });
   });

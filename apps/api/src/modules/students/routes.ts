@@ -1,10 +1,10 @@
-import type { FastifyInstance } from "fastify";
+﻿import type { FastifyInstance } from "fastify";
 import { eq, and, ilike, sql, count, asc, desc } from "drizzle-orm";
 import { db, schema } from "@edusync/db";
 import { createStudentSchema, updateStudentSchema, studentListQuerySchema } from "@edusync/validators";
 import { uuidParamSchema } from "@edusync/validators";
 import { validate } from "../../middleware/validate";
-import { authenticate, authorize, tenantGuard } from "../../middleware/auth";
+import { authenticate, authorize } from "../../middleware/auth";
 import { sendSuccess, sendPaginated } from "../../utils/response";
 import { NotFoundError, ForbiddenError } from "../../utils/errors";
 import { UserRole } from "@edusync/shared";
@@ -13,7 +13,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
   // All student routes require authentication
   app.addHook("preHandler", authenticate);
 
-  // ─── GET /students ───
+  // â”€â”€â”€ GET /students â”€â”€â”€
   app.get(
     "/",
     {
@@ -93,7 +93,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
-  // ─── GET /students/:id ───
+  // â”€â”€â”€ GET /students/:id â”€â”€â”€
   app.get(
     "/:id",
     {
@@ -142,7 +142,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
       });
 
       if (!student) {
-        throw new NotFoundError("Öğrenci");
+        throw new NotFoundError("Ã–ÄŸrenci");
       }
 
       // If parent, check they're linked to this student
@@ -151,7 +151,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
           (sp) => sp.parentId === request.user!.userId
         );
         if (!isLinked) {
-          throw new ForbiddenError("Bu öğrencinin bilgilerine erişim yetkiniz yok");
+          throw new ForbiddenError("Bu Ã¶ÄŸrencinin bilgilerine eriÅŸim yetkiniz yok");
         }
       }
 
@@ -159,7 +159,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
-  // ─── POST /students ───
+  // â”€â”€â”€ POST /students â”€â”€â”€
   app.post(
     "/",
     {
@@ -179,6 +179,20 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
 
       if (!tenantId) {
         throw new ForbiddenError("Tenant bilgisi gerekli");
+      }
+
+      if (data.classId) {
+        const classRecord = await db.query.classes.findFirst({
+          where: and(
+            eq(schema.classes.id, data.classId),
+            eq(schema.classes.tenantId, tenantId)
+          ),
+          columns: { id: true },
+        });
+
+        if (!classRecord) {
+          throw new NotFoundError("SÄ±nÄ±f");
+        }
       }
 
       // Generate student number
@@ -223,7 +237,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
-  // ─── PUT /students/:id ───
+  // â”€â”€â”€ PUT /students/:id â”€â”€â”€
   app.put(
     "/:id",
     {
@@ -241,17 +255,30 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
       const { id } = (request as any).validatedParams;
       const data = (request as any).validatedBody;
       const tenantId = request.user!.tenantId;
+      const conditions: any[] = [eq(schema.students.id, id)];
+      if (tenantId) conditions.push(eq(schema.students.tenantId, tenantId));
 
       // Check student exists and belongs to tenant
       const existing = await db.query.students.findFirst({
-        where: and(
-          eq(schema.students.id, id),
-          tenantId ? eq(schema.students.tenantId, tenantId) : undefined
-        ),
+        where: and(...conditions),
       });
 
       if (!existing) {
         throw new NotFoundError("Öğrenci");
+      }
+
+      if (data.classId) {
+        const classRecord = await db.query.classes.findFirst({
+          where: and(
+            eq(schema.classes.id, data.classId),
+            eq(schema.classes.tenantId, existing.tenantId)
+          ),
+          columns: { id: true },
+        });
+
+        if (!classRecord) {
+          throw new NotFoundError("Sınıf");
+        }
       }
 
       // Update
@@ -263,7 +290,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
       const [updated] = await db
         .update(schema.students)
         .set(updateData)
-        .where(eq(schema.students.id, id))
+        .where(and(...conditions))
         .returning();
 
       // Audit log
@@ -280,7 +307,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
-  // ─── DELETE /students/:id ───
+  // â”€â”€â”€ DELETE /students/:id â”€â”€â”€
   app.delete(
     "/:id",
     {
@@ -292,12 +319,11 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const { id } = (request as any).validatedParams;
       const tenantId = request.user!.tenantId;
+      const conditions: any[] = [eq(schema.students.id, id)];
+      if (tenantId) conditions.push(eq(schema.students.tenantId, tenantId));
 
       const existing = await db.query.students.findFirst({
-        where: and(
-          eq(schema.students.id, id),
-          tenantId ? eq(schema.students.tenantId, tenantId) : undefined
-        ),
+        where: and(...conditions),
       });
 
       if (!existing) {
@@ -308,7 +334,7 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
       await db
         .update(schema.students)
         .set({ status: "INACTIVE", updatedAt: new Date() })
-        .where(eq(schema.students.id, id));
+        .where(and(...conditions));
 
       // Audit log
       await db.insert(schema.auditLogs).values({
@@ -320,7 +346,8 @@ export async function studentRoutes(app: FastifyInstance): Promise<void> {
         ipAddress: request.ip,
       });
 
-      sendSuccess(reply, { message: "Öğrenci başarıyla silindi" });
+      sendSuccess(reply, { message: "Ã–ÄŸrenci baÅŸarÄ±yla silindi" });
     }
   );
 }
+

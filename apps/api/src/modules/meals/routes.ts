@@ -16,9 +16,13 @@ export async function mealRoutes(app: FastifyInstance): Promise<void> {
   app.get("/", { preHandler: [validate({ query: mealMenuQuerySchema })] }, async (request, reply) => {
     const query = (request as any).validatedQuery;
     const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
     const conditions: any[] = [];
 
-    if (tenantId) conditions.push(eq(schema.mealMenus.tenantId, tenantId));
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.mealMenus.tenantId, tenantId));
+    }
     if (query.startDate) conditions.push(gte(schema.mealMenus.date, query.startDate));
     if (query.endDate) conditions.push(lte(schema.mealMenus.date, query.endDate));
     if (query.mealType) conditions.push(eq(schema.mealMenus.mealType, query.mealType));
@@ -41,8 +45,17 @@ export async function mealRoutes(app: FastifyInstance): Promise<void> {
   // ─── GET /meals/:id ───
   app.get("/:id", { preHandler: [validate({ params: uuidParamSchema })] }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.mealMenus.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.mealMenus.tenantId, tenantId));
+    }
+
     const menu = await db.query.mealMenus.findFirst({
-      where: eq(schema.mealMenus.id, id),
+      where: and(...conditions),
       with: { items: true, creator: { columns: { id: true, firstName: true, lastName: true } } },
     });
     if (!menu) throw new NotFoundError("Yemek menüsü");
@@ -100,8 +113,16 @@ export async function mealRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
     const { items } = (request as any).validatedBody;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.mealMenus.id, id)];
 
-    const existing = await db.query.mealMenus.findFirst({ where: eq(schema.mealMenus.id, id) });
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.mealMenus.tenantId, tenantId));
+    }
+
+    const existing = await db.query.mealMenus.findFirst({ where: and(...conditions) });
     if (!existing) throw new NotFoundError("Yemek menüsü");
 
     if (items) {
@@ -119,10 +140,13 @@ export async function mealRoutes(app: FastifyInstance): Promise<void> {
       );
     }
 
-    await db.update(schema.mealMenus).set({ updatedAt: new Date() }).where(eq(schema.mealMenus.id, id));
+    await db
+      .update(schema.mealMenus)
+      .set({ updatedAt: new Date() })
+      .where(and(...conditions));
 
     const result = await db.query.mealMenus.findFirst({
-      where: eq(schema.mealMenus.id, id),
+      where: and(...conditions),
       with: { items: true },
     });
 
@@ -137,7 +161,22 @@ export async function mealRoutes(app: FastifyInstance): Promise<void> {
     ],
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
-    await db.delete(schema.mealMenus).where(eq(schema.mealMenus.id, id));
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.mealMenus.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.mealMenus.tenantId, tenantId));
+    }
+
+    const deleted = await db
+      .delete(schema.mealMenus)
+      .where(and(...conditions))
+      .returning({ id: schema.mealMenus.id });
+
+    if (!deleted.length) throw new NotFoundError("Yemek menüsü");
+
     sendSuccess(reply, { message: "Menü silindi" });
   });
 }

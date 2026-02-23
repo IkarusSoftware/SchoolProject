@@ -17,8 +17,13 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
   // ─── GET /schedules/subjects ───
   app.get("/subjects", async (request, reply) => {
     const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
     const conditions: any[] = [];
-    if (tenantId) conditions.push(eq(schema.subjects.tenantId, tenantId));
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.subjects.tenantId, tenantId));
+    }
 
     const subjectsList = await db.query.subjects.findMany({
       where: conditions.length > 0 ? and(...conditions) : undefined,
@@ -55,7 +60,22 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
     ],
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
-    await db.delete(schema.subjects).where(eq(schema.subjects.id, id));
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.subjects.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.subjects.tenantId, tenantId));
+    }
+
+    const deleted = await db
+      .delete(schema.subjects)
+      .where(and(...conditions))
+      .returning({ id: schema.subjects.id });
+
+    if (!deleted.length) throw new NotFoundError("Ders");
+
     sendSuccess(reply, { message: "Ders silindi" });
   });
 
@@ -65,9 +85,13 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
   app.get("/", { preHandler: [validate({ query: scheduleQuerySchema })] }, async (request, reply) => {
     const query = (request as any).validatedQuery;
     const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
     const conditions: any[] = [];
 
-    if (tenantId) conditions.push(eq(schema.schedules.tenantId, tenantId));
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.schedules.tenantId, tenantId));
+    }
     if (query.classId) conditions.push(eq(schema.schedules.classId, query.classId));
     if (query.teacherId) conditions.push(eq(schema.schedules.teacherId, query.teacherId));
     if (query.dayOfWeek) conditions.push(eq(schema.schedules.dayOfWeek, query.dayOfWeek));
@@ -101,9 +125,42 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
     const tenantId = request.user!.tenantId;
     if (!tenantId) throw new ForbiddenError();
 
+    const classRecord = await db.query.classes.findFirst({
+      where: and(
+        eq(schema.classes.id, data.classId),
+        eq(schema.classes.tenantId, tenantId)
+      ),
+    });
+    if (!classRecord) throw new NotFoundError("Sınıf");
+
+    const subjectRecord = await db.query.subjects.findFirst({
+      where: and(
+        eq(schema.subjects.id, data.subjectId),
+        eq(schema.subjects.tenantId, tenantId)
+      ),
+    });
+    if (!subjectRecord) throw new NotFoundError("Ders");
+
+    const teacherRecord = await db.query.users.findFirst({
+      where: and(
+        eq(schema.users.id, data.teacherId),
+        eq(schema.users.tenantId, tenantId)
+      ),
+    });
+    if (!teacherRecord) throw new NotFoundError("Öğretmen");
+
+    const academicYearRecord = await db.query.academicYears.findFirst({
+      where: and(
+        eq(schema.academicYears.id, data.academicYearId),
+        eq(schema.academicYears.tenantId, tenantId)
+      ),
+    });
+    if (!academicYearRecord) throw new NotFoundError("Akademik yıl");
+
     // Çakışma kontrolü - aynı sınıf, aynı gün, aynı saat
     const classConflict = await db.query.schedules.findFirst({
       where: and(
+        eq(schema.schedules.tenantId, tenantId),
         eq(schema.schedules.classId, data.classId),
         eq(schema.schedules.dayOfWeek, data.dayOfWeek),
         eq(schema.schedules.startTime, data.startTime),
@@ -114,6 +171,7 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
     // Öğretmen çakışma kontrolü
     const teacherConflict = await db.query.schedules.findFirst({
       where: and(
+        eq(schema.schedules.tenantId, tenantId),
         eq(schema.schedules.teacherId, data.teacherId),
         eq(schema.schedules.dayOfWeek, data.dayOfWeek),
         eq(schema.schedules.startTime, data.startTime),
@@ -147,9 +205,67 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
     const data = (request as any).validatedBody;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.schedules.id, id)];
 
-    const [updated] = await db.update(schema.schedules).set({ ...data, updatedAt: new Date() })
-      .where(eq(schema.schedules.id, id)).returning();
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.schedules.tenantId, tenantId));
+    }
+
+    const existing = await db.query.schedules.findFirst({
+      where: and(...conditions),
+    });
+    if (!existing) throw new NotFoundError("Ders programı kaydı");
+
+    if (!isSuperAdmin && tenantId) {
+      if (data.classId) {
+        const classRecord = await db.query.classes.findFirst({
+          where: and(
+            eq(schema.classes.id, data.classId),
+            eq(schema.classes.tenantId, tenantId)
+          ),
+        });
+        if (!classRecord) throw new NotFoundError("Sınıf");
+      }
+
+      if (data.subjectId) {
+        const subjectRecord = await db.query.subjects.findFirst({
+          where: and(
+            eq(schema.subjects.id, data.subjectId),
+            eq(schema.subjects.tenantId, tenantId)
+          ),
+        });
+        if (!subjectRecord) throw new NotFoundError("Ders");
+      }
+
+      if (data.teacherId) {
+        const teacherRecord = await db.query.users.findFirst({
+          where: and(
+            eq(schema.users.id, data.teacherId),
+            eq(schema.users.tenantId, tenantId)
+          ),
+        });
+        if (!teacherRecord) throw new NotFoundError("Öğretmen");
+      }
+
+      if (data.academicYearId) {
+        const academicYearRecord = await db.query.academicYears.findFirst({
+          where: and(
+            eq(schema.academicYears.id, data.academicYearId),
+            eq(schema.academicYears.tenantId, tenantId)
+          ),
+        });
+        if (!academicYearRecord) throw new NotFoundError("Akademik yıl");
+      }
+    }
+
+    const [updated] = await db
+      .update(schema.schedules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(...conditions))
+      .returning();
     if (!updated) throw new NotFoundError("Ders programı kaydı");
 
     sendSuccess(reply, updated);
@@ -163,7 +279,22 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
     ],
   }, async (request, reply) => {
     const { id } = (request as any).validatedParams;
-    await db.delete(schema.schedules).where(eq(schema.schedules.id, id));
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === UserRole.SUPER_ADMIN;
+    const conditions: any[] = [eq(schema.schedules.id, id)];
+
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conditions.push(eq(schema.schedules.tenantId, tenantId));
+    }
+
+    const deleted = await db
+      .delete(schema.schedules)
+      .where(and(...conditions))
+      .returning({ id: schema.schedules.id });
+
+    if (!deleted.length) throw new NotFoundError("Ders programı kaydı");
+
     sendSuccess(reply, { message: "Ders programı kaydı silindi" });
   });
 }

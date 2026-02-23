@@ -6,7 +6,7 @@ import { uuidParamSchema } from "@edusync/validators";
 import { validate } from "../../middleware/validate";
 import { authenticate } from "../../middleware/auth";
 import { sendSuccess, sendPaginated } from "../../utils/response";
-import { NotFoundError, ForbiddenError } from "../../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../../utils/errors";
 
 export async function messagingRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", authenticate);
@@ -14,11 +14,26 @@ export async function messagingRoutes(app: FastifyInstance): Promise<void> {
   // ─── GET /messages/conversations (kullanıcının sohbetleri) ───
   app.get("/conversations", async (request, reply) => {
     const userId = request.user!.userId;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === "SUPER_ADMIN";
+
+    if (!isSuperAdmin && !tenantId) {
+      throw new ForbiddenError("Tenant bilgisi gerekli");
+    }
 
     const participations = await db.query.conversationParticipants.findMany({
       where: eq(schema.conversationParticipants.userId, userId),
       with: {
         conversation: {
+          columns: {
+            id: true,
+            tenantId: true,
+            type: true,
+            title: true,
+            lastMessageAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
           with: {
             participants: {
               with: {
@@ -35,7 +50,11 @@ export async function messagingRoutes(app: FastifyInstance): Promise<void> {
       },
     });
 
-    const conversations = participations
+    const scopedParticipations = participations.filter((p) =>
+      isSuperAdmin ? true : p.conversation.tenantId === tenantId
+    );
+
+    const conversations = scopedParticipations
       .map(p => ({
         ...p.conversation,
         lastReadAt: p.lastReadAt,
@@ -59,20 +78,52 @@ export async function messagingRoutes(app: FastifyInstance): Promise<void> {
     const userId = request.user!.userId;
     const tenantId = request.user!.tenantId;
     if (!tenantId) throw new ForbiddenError();
+    if (participantId === userId) {
+      throw new BadRequestError("Kendinizle sohbet başlatamazsınız");
+    }
+
+    const participantUser = await db.query.users.findFirst({
+      where: eq(schema.users.id, participantId),
+      columns: { id: true, tenantId: true, isActive: true },
+    });
+
+    if (!participantUser || !participantUser.isActive) {
+      throw new NotFoundError("Kullanıcı");
+    }
+
+    if (participantUser.tenantId !== tenantId) {
+      throw new ForbiddenError("Farklı okuldan kullanıcı ile sohbet başlatamazsınız");
+    }
 
     // Mevcut direkt sohbet var mı kontrol et
     if (type === "DIRECT") {
-      const existing = await db.execute<any>(
-        `SELECT cp1.conversation_id FROM edusync.conversation_participants cp1
-         JOIN edusync.conversation_participants cp2 ON cp1.conversation_id = cp2.conversation_id
-         JOIN edusync.conversations c ON c.id = cp1.conversation_id
-         WHERE cp1.user_id = '${userId}' AND cp2.user_id = '${participantId}' AND c.type = 'DIRECT'
-         LIMIT 1`
-      );
+      const userParticipations = await db.query.conversationParticipants.findMany({
+        where: eq(schema.conversationParticipants.userId, userId),
+        columns: { conversationId: true },
+        with: {
+          conversation: {
+            columns: { id: true, type: true, tenantId: true },
+            with: {
+              participants: {
+                columns: { userId: true },
+              },
+            },
+          },
+        },
+      });
 
-      if (existing.length > 0) {
+      const existingConversationId = userParticipations.find(
+        (participation) =>
+          participation.conversation.tenantId === tenantId &&
+          participation.conversation.type === "DIRECT" &&
+          participation.conversation.participants.some(
+            (cp) => cp.userId === participantId
+          )
+      )?.conversationId;
+
+      if (existingConversationId) {
         const conv = await db.query.conversations.findFirst({
-          where: eq(schema.conversations.id, existing[0].conversation_id),
+          where: eq(schema.conversations.id, existingConversationId),
           with: { participants: { with: { user: { columns: { id: true, firstName: true, lastName: true, avatar: true } } } } },
         });
         return sendSuccess(reply, conv);
@@ -107,6 +158,20 @@ export async function messagingRoutes(app: FastifyInstance): Promise<void> {
     const { id } = (request as any).validatedParams;
     const query = (request as any).validatedQuery;
     const userId = request.user!.userId;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === "SUPER_ADMIN";
+
+    const conversationConditions: any[] = [eq(schema.conversations.id, id)];
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conversationConditions.push(eq(schema.conversations.tenantId, tenantId));
+    }
+
+    const conversation = await db.query.conversations.findFirst({
+      where: and(...conversationConditions),
+      columns: { id: true },
+    });
+    if (!conversation) throw new NotFoundError("Sohbet");
 
     // Kullanıcı bu sohbete dahil mi?
     const participant = await db.query.conversationParticipants.findFirst({
@@ -149,6 +214,20 @@ export async function messagingRoutes(app: FastifyInstance): Promise<void> {
     const { id } = (request as any).validatedParams;
     const { content, type, metadata } = (request as any).validatedBody;
     const userId = request.user!.userId;
+    const tenantId = request.user!.tenantId;
+    const isSuperAdmin = request.user!.role === "SUPER_ADMIN";
+
+    const conversationConditions: any[] = [eq(schema.conversations.id, id)];
+    if (!isSuperAdmin) {
+      if (!tenantId) throw new ForbiddenError("Tenant bilgisi gerekli");
+      conversationConditions.push(eq(schema.conversations.tenantId, tenantId));
+    }
+
+    const conversation = await db.query.conversations.findFirst({
+      where: and(...conversationConditions),
+      columns: { id: true },
+    });
+    if (!conversation) throw new NotFoundError("Sohbet");
 
     // Kullanıcı bu sohbete dahil mi?
     const participant = await db.query.conversationParticipants.findFirst({
@@ -169,7 +248,7 @@ export async function messagingRoutes(app: FastifyInstance): Promise<void> {
 
     // Sohbetin lastMessageAt'ini güncelle
     await db.update(schema.conversations).set({ lastMessageAt: new Date(), updatedAt: new Date() })
-      .where(eq(schema.conversations.id, id));
+      .where(and(...conversationConditions));
 
     const messageWithSender = await db.query.messages.findFirst({
       where: eq(schema.messages.id, message.id),
