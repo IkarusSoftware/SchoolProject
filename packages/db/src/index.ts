@@ -3,7 +3,7 @@ import postgres from "postgres";
 import * as schema from "./schema/index.js";
 
 const connectionString =
-  process.env.DATABASE_URL || "postgresql://edusync:edusync_dev_2026@localhost:5432/edusync_dev";
+  process.env.DATABASE_URL || "postgresql://furkan:1234@localhost:5432/edusync_dev";
 
 // Connection for queries
 const queryClient = postgres(connectionString, {

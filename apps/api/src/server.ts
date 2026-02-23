@@ -11,6 +11,11 @@ import { API_PREFIX } from "@edusync/shared";
 import { authRoutes } from "./modules/auth/routes";
 import { studentRoutes } from "./modules/students/routes";
 import { schoolRoutes } from "./modules/schools/routes";
+import { attendanceRoutes } from "./modules/attendance/routes";
+import { messagingRoutes } from "./modules/messaging/routes";
+import { announcementRoutes } from "./modules/announcements/routes";
+import { mealRoutes } from "./modules/meals/routes";
+import { scheduleRoutes } from "./modules/schedules/routes";
 
 async function buildApp() {
   const app = Fastify({
@@ -106,6 +111,11 @@ async function buildApp() {
   app.register(authRoutes, { prefix: `${API_PREFIX}/auth` });
   app.register(studentRoutes, { prefix: `${API_PREFIX}/students` });
   app.register(schoolRoutes, { prefix: `${API_PREFIX}/schools` });
+  app.register(attendanceRoutes, { prefix: `${API_PREFIX}/attendance` });
+  app.register(messagingRoutes, { prefix: `${API_PREFIX}/messages` });
+  app.register(announcementRoutes, { prefix: `${API_PREFIX}/announcements` });
+  app.register(mealRoutes, { prefix: `${API_PREFIX}/meals` });
+  app.register(scheduleRoutes, { prefix: `${API_PREFIX}/schedules` });
 
   return app;
 }
