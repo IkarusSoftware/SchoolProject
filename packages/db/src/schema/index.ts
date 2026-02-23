@@ -600,6 +600,11 @@ export const announcementsRelations = relations(announcements, ({ one, many }) =
   reads: many(announcementReads),
 }));
 
+export const announcementReadsRelations = relations(announcementReads, ({ one }) => ({
+  announcement: one(announcements, { fields: [announcementReads.announcementId], references: [announcements.id] }),
+  user: one(users, { fields: [announcementReads.userId], references: [users.id] }),
+}));
+
 export const mealMenusRelations = relations(mealMenus, ({ one, many }) => ({
   tenant: one(tenants, { fields: [mealMenus.tenantId], references: [tenants.id] }),
   creator: one(users, { fields: [mealMenus.createdBy], references: [users.id] }),

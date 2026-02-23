@@ -1,6 +1,7 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,22 +13,39 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API_BASE_URL } from "../../../config/api";
 import { colors, radius, spacing, typography } from "../../../theme";
 import { getErrorMessage } from "../../../utils/errors";
 import { useAuth } from "../AuthProvider";
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ||
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:4000/api/v1"
-    : "http://localhost:4000/api/v1");
+type DemoRole = "PARENT" | "TEACHER";
+
+const demoCredentials: Record<DemoRole, { email: string; password: string }> = {
+  PARENT: { email: "veli@demo-okulu.com", password: "Demo1234!" },
+  TEACHER: { email: "ogretmen@demo-okulu.com", password: "Demo1234!" },
+};
 
 export function LoginScreen() {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState("veli@demo-okulu.com");
-  const [password, setPassword] = useState("Demo1234!");
+  const [activeRole, setActiveRole] = useState<DemoRole>("PARENT");
+  const [email, setEmail] = useState(demoCredentials.PARENT.email);
+  const [password, setPassword] = useState(demoCredentials.PARENT.password);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const roleHint = useMemo(
+    () =>
+      activeRole === "PARENT"
+        ? "Veli deneyimi: bildirim, yoklama, yemek, mesaj"
+        : "Ogretmen deneyimi: yoklama alma ve mesajlasma",
+    [activeRole]
+  );
+
+  const setDemoRole = (role: DemoRole) => {
+    setActiveRole(role);
+    setEmail(demoCredentials[role].email);
+    setPassword(demoCredentials[role].password);
+  };
 
   const handleLogin = async () => {
     setSubmitting(true);
@@ -50,18 +68,62 @@ export function LoginScreen() {
       style={styles.page}
     >
       <StatusBar style="light" />
+      <View pointerEvents="none" style={styles.backgroundLayer}>
+        <View style={[styles.backgroundOrb, styles.backgroundOrbOne]} />
+        <View style={[styles.backgroundOrb, styles.backgroundOrbTwo]} />
+      </View>
+
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.formWrap}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <View style={styles.hero}>
-            <Text style={styles.kicker}>EDUSYNC MOBILE</Text>
-            <Text style={styles.title}>Parent Login</Text>
-            <Text style={styles.subtitle}>Sign in to access attendance, meals and messages.</Text>
+            <View style={styles.heroChip}>
+              <Text style={styles.kicker}>EDUSYNC SUITE</Text>
+            </View>
+            <Text style={styles.title}>Modern School Experience</Text>
+            <Text style={styles.subtitle}>
+              Tek uygulamada veli ve ogretmen akislarini premium mobil deneyimle yonetin.
+            </Text>
           </View>
 
           <View style={styles.card}>
+            <View style={styles.roleSegment}>
+              {(["PARENT", "TEACHER"] as const).map((role) => {
+                const selected = role === activeRole;
+                return (
+                  <Pressable
+                    key={role}
+                    onPress={() => {
+                      setDemoRole(role);
+                    }}
+                    style={({ pressed }) => [
+                      styles.roleChip,
+                      selected ? styles.roleChipActive : null,
+                      pressed ? styles.roleChipPressed : null,
+                    ]}
+                  >
+                    <Ionicons
+                      name={role === "PARENT" ? "people-outline" : "school-outline"}
+                      size={14}
+                      color={selected ? colors.textWhite : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.roleChipText,
+                        selected ? styles.roleChipTextActive : null,
+                      ]}
+                    >
+                      {role === "PARENT" ? "Veli" : "Ogretmen"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.roleHint}>{roleHint}</Text>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <TextInput
@@ -92,22 +154,30 @@ export function LoginScreen() {
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <Pressable
-              style={[styles.button, submitting ? styles.buttonDisabled : null]}
+              style={({ pressed }) => [
+                styles.buttonWrap,
+                submitting ? styles.buttonDisabled : null,
+                pressed ? styles.buttonPressed : null,
+              ]}
               disabled={submitting}
               onPress={handleLogin}
             >
-              {submitting ? (
-                <ActivityIndicator size="small" color={colors.textWhite} />
-              ) : (
-                <Text style={styles.buttonText}>Sign in</Text>
-              )}
+              <LinearGradient
+                colors={[colors.accentBlueStrong, colors.accentBlue]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.button}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color={colors.textWhite} />
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>Sign in</Text>
+                    <Ionicons name="arrow-forward" size={16} color={colors.textWhite} />
+                  </>
+                )}
+              </LinearGradient>
             </Pressable>
-
-            <View style={styles.helperBox}>
-              <Text style={styles.helperTitle}>Demo account</Text>
-              <Text style={styles.helperText}>Email: veli@demo-okulu.com</Text>
-              <Text style={styles.helperText}>Password: Demo1234!</Text>
-            </View>
 
             <Text style={styles.endpointText}>API: {API_BASE_URL}</Text>
           </View>
@@ -121,6 +191,27 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
   },
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backgroundOrb: {
+    position: "absolute",
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(151, 215, 255, 0.16)",
+  },
+  backgroundOrbOne: {
+    width: 280,
+    height: 280,
+    top: -120,
+    right: -80,
+  },
+  backgroundOrbTwo: {
+    width: 220,
+    height: 220,
+    bottom: 100,
+    left: -90,
+    backgroundColor: "rgba(255, 194, 126, 0.13)",
+  },
   safeArea: {
     flex: 1,
   },
@@ -133,33 +224,82 @@ const styles = StyleSheet.create({
   hero: {
     gap: spacing.xs,
   },
+  heroChip: {
+    alignSelf: "flex-start",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: "rgba(170, 216, 243, 0.52)",
+    backgroundColor: "rgba(8, 32, 49, 0.2)",
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs - 1,
+  },
   kicker: {
-    color: "#9dd4ff",
+    color: "#a5d8f5",
     fontSize: typography.bodyXS,
-    letterSpacing: 1.6,
-    fontFamily: typography.fontDisplay,
+    letterSpacing: 1.1,
+    fontFamily: typography.fontDisplayMedium,
   },
   title: {
     color: colors.textWhite,
     fontSize: typography.titleXL,
-    lineHeight: 34,
+    lineHeight: 38,
     fontFamily: typography.fontDisplay,
   },
   subtitle: {
     color: colors.textLight,
-    fontSize: typography.bodySM,
+    fontSize: typography.bodyMD,
+    lineHeight: 20,
     fontFamily: typography.fontBody,
   },
   card: {
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
     padding: spacing.lg,
     gap: spacing.md,
-    shadowColor: "#042237",
-    shadowOpacity: 0.28,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 12 },
     shadowRadius: 22,
     elevation: 10,
+  },
+  roleSegment: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  roleChip: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  roleChipActive: {
+    borderColor: colors.accentBlue,
+    backgroundColor: colors.accentBlue,
+  },
+  roleChipPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.98 }],
+  },
+  roleChipText: {
+    color: colors.textSecondary,
+    fontSize: typography.bodySM,
+    fontFamily: typography.fontBodyStrong,
+  },
+  roleChipTextActive: {
+    color: colors.textWhite,
+  },
+  roleHint: {
+    color: colors.textMuted,
+    fontSize: typography.bodySM,
+    fontFamily: typography.fontBodyRegular,
   },
   inputGroup: {
     gap: spacing.xs,
@@ -167,10 +307,10 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textPrimary,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontDisplay,
+    fontFamily: typography.fontBodyStrong,
   },
   input: {
-    height: 44,
+    minHeight: 45,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -181,16 +321,25 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontBody,
   },
   errorText: {
-    color: "#b01818",
+    color: colors.accentCoral,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontBody,
+    fontFamily: typography.fontBodyRegular,
+  },
+  buttonWrap: {
+    borderRadius: radius.md,
+    overflow: "hidden",
   },
   button: {
-    height: 46,
+    minHeight: 46,
     borderRadius: radius.md,
-    backgroundColor: colors.accentBlue,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: spacing.xs + 1,
+  },
+  buttonPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
   },
   buttonDisabled: {
     opacity: 0.75,
@@ -198,29 +347,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: colors.textWhite,
     fontSize: typography.bodyMD,
-    fontFamily: typography.fontDisplay,
-  },
-  helperBox: {
-    borderRadius: radius.md,
-    backgroundColor: "#eaf5ff",
-    borderWidth: 1,
-    borderColor: "#cee6fb",
-    padding: spacing.sm + 2,
-    gap: 2,
-  },
-  helperTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.bodySM,
-    fontFamily: typography.fontDisplay,
-  },
-  helperText: {
-    color: colors.textSecondary,
-    fontSize: typography.bodySM,
-    fontFamily: typography.fontBody,
+    fontFamily: typography.fontDisplayMedium,
   },
   endpointText: {
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontSize: typography.bodyXS,
-    fontFamily: typography.fontBody,
+    fontFamily: typography.fontBodyRegular,
   },
 });

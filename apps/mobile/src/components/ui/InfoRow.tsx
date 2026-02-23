@@ -26,6 +26,7 @@ export function InfoRow({
 
   return (
     <View style={styles.row}>
+      <View style={[styles.indicator, { backgroundColor: tone.text }]} />
       <View style={styles.textWrap}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.detail}>{detail}</Text>
@@ -42,15 +43,21 @@ export function InfoRow({
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
     gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
-    backgroundColor: colors.surfaceSoft,
+    borderColor: "#d2e1ec",
+    backgroundColor: "#f8fcff",
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+  },
+  indicator: {
+    width: 4,
+    alignSelf: "stretch",
+    borderRadius: radius.pill,
+    opacity: 0.9,
   },
   textWrap: {
     flex: 1,
@@ -58,21 +65,23 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontSize: typography.bodyMD,
-    fontFamily: typography.fontDisplay,
+    fontFamily: typography.fontBodyStrong,
   },
   detail: {
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontBody,
-    marginTop: 2,
+    fontFamily: typography.fontBodyRegular,
+    marginTop: 4,
+    lineHeight: 17,
   },
   badge: {
     borderRadius: radius.pill,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)",
     paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xs + 1,
     fontSize: typography.bodyXS,
-    fontFamily: typography.fontDisplay,
+    fontFamily: typography.fontBodyStrong,
   },
 });
-

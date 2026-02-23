@@ -1,289 +1,273 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useToast } from "../../../components/feedback/ToastProvider";
 import { GradientLayout } from "../../../components/layout/GradientLayout";
 import { InfoRow } from "../../../components/ui/InfoRow";
 import { KpiTile } from "../../../components/ui/KpiTile";
-import { RequestState } from "../../../components/ui/RequestState";
 import { SectionCard } from "../../../components/ui/SectionCard";
 import { colors, radius, spacing, typography } from "../../../theme";
-import { getErrorMessage } from "../../../utils/errors";
-import { formatDateTime, humanizeEnum } from "../../../utils/format";
+import { formatDateTime } from "../../../utils/format";
 import { useAuth } from "../../auth/AuthProvider";
+import { useParentMock } from "../mock/ParentMockProvider";
 
-interface DashboardUser {
-  id: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-}
-
-interface DashboardAnnouncement {
-  id: string;
-  title: string;
-  priority: string;
-  createdAt: string;
-}
-
-interface DashboardAttendanceRecord {
-  id: string;
-  status: string;
-}
-
-interface ConversationParticipant {
-  userId: string;
-  user: {
-    firstName: string;
-    lastName: string;
-  };
-}
-
-interface DashboardConversation {
-  id: string;
-  title?: string | null;
-  lastReadAt?: string | null;
-  otherParticipants: ConversationParticipant[];
-  lastMessage: {
-    content: string;
-    senderId: string;
-    createdAt: string;
-  } | null;
-}
-
-interface DashboardState {
-  user: DashboardUser;
-  announcements: DashboardAnnouncement[];
-  attendance: DashboardAttendanceRecord[];
-  conversations: DashboardConversation[];
-}
-
-function priorityTone(priority: string) {
+function announcementTone(priority: string) {
   if (priority === "URGENT") return "hot" as const;
   if (priority === "HIGH") return "warn" as const;
   if (priority === "LOW") return "ok" as const;
   return "info" as const;
 }
 
-function conversationTitle(item: DashboardConversation): string {
-  if (item.title && item.title.trim().length > 0) {
-    return item.title;
-  }
-
-  if (item.otherParticipants.length > 0) {
-    return item.otherParticipants
-      .map((participant) => `${participant.user.firstName} ${participant.user.lastName}`)
-      .join(", ");
-  }
-
-  return "Conversation";
+function ActionButton({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.actionButton,
+        pressed ? styles.actionButtonPressed : null,
+      ]}
+      onPress={onPress}
+    >
+      <Text style={styles.actionButtonText}>{label}</Text>
+    </Pressable>
+  );
 }
 
 export function DashboardScreen() {
-  const { authorizedRequest, signOut } = useAuth();
-  const [state, setState] = useState<DashboardState | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { signOut } = useAuth();
+  const { showToast } = useToast();
+  const {
+    profile,
+    events,
+    announcements,
+    conversations,
+    unreadAnnouncementCount,
+    unreadMessageCount,
+    attendanceRate,
+    markAllAnnouncementsRead,
+    markAllConversationsRead,
+    markAnnouncementRead,
+    markConversationRead,
+  } = useParentMock();
+  const [reminderSent, setReminderSent] = useState(false);
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [me, announcements, attendance, conversations] = await Promise.all([
-        authorizedRequest<{ user: DashboardUser }>("/auth/me"),
-        authorizedRequest<DashboardAnnouncement[]>(
-          "/announcements?page=1&pageSize=3&isPublished=true"
-        ),
-        authorizedRequest<DashboardAttendanceRecord[]>("/attendance?page=1&pageSize=20"),
-        authorizedRequest<DashboardConversation[]>("/messages/conversations"),
-      ]);
-
-      setState({
-        user: me.user,
-        announcements,
-        attendance,
-        conversations,
-      });
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, "Dashboard data could not be loaded."));
-    } finally {
-      setLoading(false);
-    }
-  }, [authorizedRequest]);
-
-  useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
-
-  const metrics = useMemo(() => {
-    if (!state) {
-      return {
-        attendanceRate: "-",
-        newNotices: "0",
-        unreadMessages: "0",
-      };
-    }
-
-    const presentCount = state.attendance.filter((record) => record.status === "PRESENT").length;
-    const attendanceRate =
-      state.attendance.length > 0
-        ? `${Math.round((presentCount / state.attendance.length) * 100)}%`
-        : "-";
-
-    const unreadMessages = state.conversations.filter((conversation) => {
-      if (!conversation.lastMessage) return false;
-      if (conversation.lastMessage.senderId === state.user.id) return false;
-      if (!conversation.lastReadAt) return true;
-      return (
-        new Date(conversation.lastMessage.createdAt).getTime() >
-        new Date(conversation.lastReadAt).getTime()
-      );
-    }).length;
-
-    return {
-      attendanceRate,
-      newNotices: String(state.announcements.length),
-      unreadMessages: String(unreadMessages),
-    };
-  }, [state]);
-
-  if (loading && !state) {
-    return (
-      <GradientLayout title="Parent Panel" subtitle="Loading dashboard...">
-        <RequestState title="Dashboard" mode="loading" />
-      </GradientLayout>
-    );
-  }
-
-  if (error && !state) {
-    return (
-      <GradientLayout title="Parent Panel" subtitle="Could not reach API">
-        <RequestState
-          title="Dashboard"
-          mode="error"
-          message={error}
-          onRetry={() => {
-            void loadDashboard();
-          }}
-        />
-      </GradientLayout>
-    );
-  }
-
-  if (!state) {
-    return (
-      <GradientLayout title="Parent Panel" subtitle="No profile data">
-        <RequestState
-          title="Dashboard"
-          mode="empty"
-          message="No user data returned from /auth/me."
-          onRetry={() => {
-            void loadDashboard();
-          }}
-        />
-      </GradientLayout>
-    );
-  }
+  const pinnedAnnouncement = useMemo(
+    () => announcements.find((item) => item.isPinned) ?? announcements[0],
+    [announcements]
+  );
+  const latestMessages = useMemo(() => conversations.slice(0, 2), [conversations]);
+  const nextEvents = useMemo(() => events.slice(0, 2), [events]);
 
   return (
     <GradientLayout
-      title="Parent Panel"
-      subtitle={`${state.user.firstName} ${state.user.lastName} · ${humanizeEnum(state.user.role)}`}
+      title="Parent Studio"
+      subtitle={`${profile.parentName} - ${profile.childName} - ${profile.className}`}
     >
-      {error ? (
-        <RequestState
-          title="Sync Warning"
-          mode="error"
-          message={error}
-          onRetry={() => {
-            void loadDashboard();
-          }}
-        />
-      ) : null}
-
-      <SectionCard title="Daily Pulse" subtitle="Live status" rightLabel="Online">
-        <View style={styles.kpiRow}>
-          <KpiTile value={metrics.attendanceRate} label="Attendance" tone="blue" />
-          <KpiTile value={metrics.newNotices} label="Notices" tone="green" />
-          <KpiTile value={metrics.unreadMessages} label="Unread msgs" tone="orange" />
+      <SectionCard
+        title="Student Snapshot"
+        subtitle={profile.schoolName}
+        rightLabel={profile.academicYear}
+      >
+        <View style={styles.snapshotGrid}>
+          <View style={styles.snapshotTile}>
+            <Text style={styles.snapshotLabel}>Student</Text>
+            <Text style={styles.snapshotValue}>{profile.childName}</Text>
+          </View>
+          <View style={styles.snapshotTile}>
+            <Text style={styles.snapshotLabel}>Class</Text>
+            <Text style={styles.snapshotValue}>{profile.className}</Text>
+          </View>
+          <View style={styles.snapshotTile}>
+            <Text style={styles.snapshotLabel}>Number</Text>
+            <Text style={styles.snapshotValue}>{profile.studentNumber}</Text>
+          </View>
+          <View style={styles.snapshotTile}>
+            <Text style={styles.snapshotLabel}>Guardian</Text>
+            <Text style={styles.snapshotValue}>{profile.relationship}</Text>
+          </View>
         </View>
-
-        <Pressable
-          style={styles.signOutButton}
-          onPress={() => {
-            void signOut();
-          }}
-        >
-          <Text style={styles.signOutText}>Sign out</Text>
-        </Pressable>
       </SectionCard>
 
-      <SectionCard title="Latest Announcements" rightLabel="View all">
-        {state.announcements.length === 0 ? (
-          <Text style={styles.emptyText}>No announcements yet.</Text>
-        ) : null}
-
-        {state.announcements.slice(0, 2).map((item) => (
-          <InfoRow
-            key={item.id}
-            title={item.title}
-            detail={formatDateTime(item.createdAt)}
-            badgeText={humanizeEnum(item.priority)}
-            badgeTone={priorityTone(item.priority)}
+      <SectionCard
+        title="Live Metrics"
+        subtitle="Daily overview"
+        rightLabel="Mock mode"
+        animateDelayMs={60}
+      >
+        <View style={styles.kpiRow}>
+          <KpiTile value={`${attendanceRate}%`} label="Attendance" tone="blue" />
+          <KpiTile value={String(unreadAnnouncementCount)} label="Unread notices" tone="orange" />
+          <KpiTile value={String(unreadMessageCount)} label="Unread msgs" tone="green" />
+        </View>
+        <View style={styles.actionRow}>
+          <ActionButton
+            label="Read All Notices"
+            onPress={() => {
+              markAllAnnouncementsRead();
+              showToast({ message: "All announcements marked as read.", tone: "success" });
+            }}
           />
+          <ActionButton
+            label="Clear Inbox"
+            onPress={() => {
+              markAllConversationsRead();
+              showToast({ message: "All conversations marked as read.", tone: "success" });
+            }}
+          />
+        </View>
+        <View style={styles.actionRow}>
+          <ActionButton
+            label={reminderSent ? "Reminder Sent" : "Send Daily Reminder"}
+            onPress={() => {
+              setReminderSent(true);
+              showToast({ message: "Daily reminder is now active.", tone: "info" });
+            }}
+          />
+          <ActionButton
+            label="Sign out"
+            onPress={() => {
+              showToast({ message: "Signing out...", tone: "warn", durationMs: 700 });
+              void signOut();
+            }}
+          />
+        </View>
+      </SectionCard>
+
+      <SectionCard
+        title="Spotlight Announcement"
+        subtitle="Tap to mark as read"
+        animateDelayMs={120}
+      >
+        {pinnedAnnouncement ? (
+          <Pressable
+            style={({ pressed }) => (pressed ? styles.itemPressed : null)}
+            onPress={() => {
+              markAnnouncementRead(pinnedAnnouncement.id);
+              showToast({ message: "Announcement marked as read.", tone: "success" });
+            }}
+          >
+            <InfoRow
+              title={pinnedAnnouncement.title}
+              detail={pinnedAnnouncement.content}
+              badgeText={pinnedAnnouncement.isRead ? "Read" : "Unread"}
+              badgeTone={announcementTone(pinnedAnnouncement.priority)}
+            />
+          </Pressable>
+        ) : (
+          <Text style={styles.emptyText}>No announcement available.</Text>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Recent Messages" subtitle="Tap to mark read" animateDelayMs={180}>
+        {latestMessages.length === 0 ? (
+          <Text style={styles.emptyText}>No conversation yet.</Text>
+        ) : null}
+        {latestMessages.map((conversation) => (
+          <Pressable
+            key={conversation.id}
+            style={({ pressed }) => (pressed ? styles.itemPressed : null)}
+            onPress={() => {
+              markConversationRead(conversation.id);
+              showToast({ message: `Marked ${conversation.participant} thread as read.`, tone: "success" });
+            }}
+          >
+            <InfoRow
+              title={conversation.participant}
+              detail={conversation.preview}
+              badgeText={
+                conversation.unreadCount > 0
+                  ? `${conversation.unreadCount} new`
+                  : undefined
+              }
+              badgeTone={conversation.unreadCount > 0 ? "ok" : "info"}
+            />
+          </Pressable>
         ))}
       </SectionCard>
 
-      <SectionCard title="Recent Messages">
-        {state.conversations.length === 0 ? (
-          <Text style={styles.emptyText}>No conversations yet.</Text>
+      <SectionCard title="Upcoming Events" subtitle="This week" animateDelayMs={240}>
+        {nextEvents.length === 0 ? (
+          <Text style={styles.emptyText}>No event available.</Text>
         ) : null}
-
-        {state.conversations.slice(0, 2).map((item) => {
-          const hasUnread =
-            Boolean(item.lastMessage) &&
-            item.lastMessage?.senderId !== state.user.id &&
-            (!item.lastReadAt ||
-              new Date(item.lastMessage.createdAt).getTime() >
-                new Date(item.lastReadAt).getTime());
-
-          return (
-            <InfoRow
-              key={item.id}
-              title={conversationTitle(item)}
-              detail={item.lastMessage?.content || "No messages yet"}
-              badgeText={hasUnread ? "New" : undefined}
-              badgeTone={hasUnread ? "ok" : "info"}
-            />
-          );
-        })}
+        {nextEvents.map((event) => (
+          <InfoRow
+            key={event.id}
+            title={event.title}
+            detail={`${formatDateTime(event.startsAt)} - ${event.location}`}
+            badgeText="Scheduled"
+            badgeTone="info"
+          />
+        ))}
       </SectionCard>
     </GradientLayout>
   );
 }
 
 const styles = StyleSheet.create({
+  snapshotGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  snapshotTile: {
+    width: "47.8%",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "#cddde9",
+    backgroundColor: "#f8fcff",
+    paddingHorizontal: spacing.sm + 3,
+    paddingVertical: spacing.sm + 2,
+  },
+  snapshotLabel: {
+    color: colors.textMuted,
+    fontSize: typography.bodyXS,
+    fontFamily: typography.fontBodyRegular,
+  },
+  snapshotValue: {
+    marginTop: 4,
+    color: colors.textPrimary,
+    fontSize: typography.bodyMD,
+    fontFamily: typography.fontBodyStrong,
+  },
   kpiRow: {
     flexDirection: "row",
     gap: spacing.sm,
   },
-  signOutButton: {
-    marginTop: spacing.sm,
-    alignSelf: "flex-start",
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: "#bfd8eb",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    backgroundColor: "#f4fafe",
+  actionRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
   },
-  signOutText: {
+  actionButton: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "#bfd4e5",
+    backgroundColor: "#eff8ff",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm + 1,
+  },
+  actionButtonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.92,
+  },
+  actionButtonText: {
     color: colors.textPrimary,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontDisplay,
+    fontFamily: typography.fontBodyStrong,
   },
   emptyText: {
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontBody,
+    fontFamily: typography.fontBodyRegular,
+  },
+  itemPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.995 }],
   },
 });

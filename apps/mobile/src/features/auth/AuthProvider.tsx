@@ -7,15 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { Platform } from "react-native";
+import { API_BASE_URL } from "../../config/api";
 import { clearSession, loadSession, saveSession, saveUser } from "./storage";
 import type { AuthStatus, AuthTokens, AuthUser } from "./types";
-
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ||
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:4000/api/v1"
-    : "http://localhost:4000/api/v1");
 
 type AuthorizedRequest = <T>(
   path: string,
@@ -115,12 +109,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
+  const userRef = useRef<AuthUser | null>(null);
   const tokensRef = useRef<AuthTokens | null>(null);
   const refreshPromiseRef = useRef<Promise<AuthTokens | null> | null>(null);
 
   useEffect(() => {
     tokensRef.current = tokens;
   }, [tokens]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const signOut = useCallback(async (): Promise<void> => {
     const activeToken = tokensRef.current?.accessToken;
@@ -137,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     await clearSession();
+    userRef.current = null;
     tokensRef.current = null;
     setTokens(null);
     setUser(null);
@@ -167,10 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         tokensRef.current = nextTokens;
         setTokens(nextTokens);
-        await saveSession(nextTokens, user);
+        await saveSession(nextTokens, userRef.current);
         return nextTokens;
       } catch {
         await clearSession();
+        userRef.current = null;
         tokensRef.current = null;
         setTokens(null);
         setUser(null);
@@ -182,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
 
     return refreshPromiseRef.current;
-  }, [user]);
+  }, []);
 
   const authorizedRequest = useCallback<AuthorizedRequest>(
     async <T,>(path: string, init: RequestInit = {}): Promise<T> => {
@@ -223,6 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       tokensRef.current = nextTokens;
+      userRef.current = nextUser;
       setTokens(nextTokens);
       setUser(nextUser);
       setStatus("authenticated");
@@ -246,7 +248,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tokensRef.current = session.tokens;
       setTokens(session.tokens);
       if (session.user) {
-        setUser(normalizeUser(session.user));
+        const normalizedSessionUser = normalizeUser(session.user);
+        userRef.current = normalizedSessionUser;
+        setUser(normalizedSessionUser);
       }
 
       try {
@@ -257,6 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         if (!mounted) return;
         const normalizedUser = normalizeUser(me.user);
+        userRef.current = normalizedUser;
         setUser(normalizedUser);
         setStatus("authenticated");
         await saveSession(session.tokens, normalizedUser);
@@ -278,12 +283,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             );
             if (!mounted) return;
             const normalizedUser = normalizeUser(me.user);
+            userRef.current = normalizedUser;
             setUser(normalizedUser);
             setStatus("authenticated");
             await saveUser(normalizedUser);
           } catch {
             if (!mounted) return;
             await clearSession();
+            userRef.current = null;
             tokensRef.current = null;
             setTokens(null);
             setUser(null);
@@ -292,6 +299,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           if (!mounted) return;
           await clearSession();
+          userRef.current = null;
           tokensRef.current = null;
           setTokens(null);
           setUser(null);
@@ -330,4 +338,3 @@ export function useAuth(): AuthContextValue {
 }
 
 export type { AuthorizedRequest, ApiError };
-

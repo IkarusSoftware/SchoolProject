@@ -39,7 +39,13 @@ export function RequestState({
         </Text>
 
         {hasRetry ? (
-          <Pressable style={styles.retryButton} onPress={onRetry}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed ? styles.retryButtonPressed : null,
+            ]}
+            onPress={onRetry}
+          >
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         ) : null}
@@ -52,29 +58,34 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
-    backgroundColor: colors.surfaceSoft,
+    borderColor: "#d3e2ee",
+    backgroundColor: "#f6fbff",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     alignItems: "center",
     gap: spacing.sm,
   },
   message: {
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontBody,
+    fontFamily: typography.fontBodyRegular,
     textAlign: "center",
+    lineHeight: 18,
   },
   retryButton: {
     marginTop: spacing.xs,
     borderRadius: radius.pill,
-    backgroundColor: colors.accentBlue,
+    backgroundColor: colors.accentBlueStrong,
     paddingHorizontal: spacing.md + 4,
     paddingVertical: spacing.xs + 2,
+  },
+  retryButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   retryText: {
     color: colors.textWhite,
     fontSize: typography.bodySM,
-    fontFamily: typography.fontDisplay,
+    fontFamily: typography.fontBodyStrong,
   },
 });
